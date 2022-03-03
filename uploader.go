@@ -13,11 +13,6 @@ import (
 	"strings"
 )
 
-const (
-	defaultAPIBuildEndpoint = "https://api.waldo.io/versions"
-	defaultAPIErrorEndpoint = "https://api.waldo.io/uploadError"
-)
-
 type Uploader struct {
 	userBuildPath   string
 	userGitBranch   string
@@ -52,10 +47,6 @@ func NewUploader(buildPath, uploadToken, variantName, gitCommit, gitBranch strin
 		userUploadToken: uploadToken,
 		userVariantName: variantName,
 		userVerbose:     verbose}
-}
-
-func Version() string {
-	return fmt.Sprintf("%s %s (%s/%s)", agentName, agentVersion, detectPlatform(), detectArch())
 }
 
 //-----------------------------------------------------------------------------
@@ -293,17 +284,18 @@ func (u *Uploader) makeBuildURL() string {
 }
 
 func (u *Uploader) makeErrorPayload(err error) string {
-	payload := fmt.Sprintf(`{"message":"%s"`, err.Error())
+	payload := ""
 
 	appendIfNotEmpty(&payload, "agentName", agentName)
 	appendIfNotEmpty(&payload, "agentVersion", agentVersion)
 	appendIfNotEmpty(&payload, "arch", u.arch)
 	appendIfNotEmpty(&payload, "ci", u.ci)
+	appendIfNotEmpty(&payload, "message", err.Error())
 	appendIfNotEmpty(&payload, "platform", u.platform)
 	appendIfNotEmpty(&payload, "wrapperName", u.userOverrides["wrapperName"])
 	appendIfNotEmpty(&payload, "wrapperVersion", u.userOverrides["wrapperVersion"])
 
-	payload += "}"
+	payload = "{" + payload + "}"
 
 	return payload
 }

@@ -15,6 +15,12 @@ import (
 	"strings"
 )
 
+func Version() string {
+	return fmt.Sprintf("%s %s (%s/%s)", agentName, agentVersion, detectPlatform(), detectArch())
+}
+
+//-----------------------------------------------------------------------------
+
 func addIfNotEmpty(query *url.Values, key string, value string) {
 	if len(value) > 0 {
 		query.Add(key, value)
@@ -22,9 +28,15 @@ func addIfNotEmpty(query *url.Values, key string, value string) {
 }
 
 func appendIfNotEmpty(payload *string, key string, value string) {
-	if len(value) > 0 {
-		*payload += fmt.Sprintf(`,"%s":"%s"`, key, value)
+	if len(value) == 0 {
+		return
 	}
+
+	if len(*payload) > 0 {
+		*payload += ","
+	}
+
+	*payload += fmt.Sprintf(`"%s":"%s"`, key, value)
 }
 
 func detectArch() string {
