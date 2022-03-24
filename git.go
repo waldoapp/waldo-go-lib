@@ -6,20 +6,66 @@ import (
 	"runtime"
 )
 
-func inferGit(skipCount int) (string, string, string) {
-	if !isGitInstalled() {
-		return "noGitCommandFound", "", ""
-	}
-
-	if !hasGitRepository() {
-		return "notGitRepository", "", ""
-	}
-
-	gitCommit := inferGitCommit(skipCount)
-	gitBranch := inferGitBranch(gitCommit)
-
-	return "ok", gitBranch, gitCommit
+type GitInfo struct {
+	access GitAccess
+	branch string
+	commit string
 }
+
+//-----------------------------------------------------------------------------
+
+type GitAccess int
+
+const (
+	Ok GitAccess = iota + 1 // MUST be first
+	NoGitCommandFound
+	NotGitRepository
+)
+
+func (ga GitAccess) String() string {
+	return [...]string{
+		"ok",
+		"noGitCommandFound",
+		"notGitRepository"}[ga-1]
+}
+
+//-----------------------------------------------------------------------------
+
+func InferGitInfo(skipCount int) *GitInfo {
+	access := Ok
+	branch := ""
+	commit := ""
+
+	if !isGitInstalled() {
+		access = NoGitCommandFound
+	} else if !hasGitRepository() {
+		access = NotGitRepository
+	} else {
+		commit = inferGitCommit(skipCount)
+		branch = inferGitBranch(commit)
+	}
+
+	return &GitInfo{
+		access: access,
+		branch: branch,
+		commit: commit}
+}
+
+//-----------------------------------------------------------------------------
+
+func (gi *GitInfo) Access() GitAccess {
+	return gi.access
+}
+
+func (gi *GitInfo) Branch() string {
+	return gi.branch
+}
+
+func (gi *GitInfo) Commit() string {
+	return gi.commit
+}
+
+//-----------------------------------------------------------------------------
 
 func inferGitBranch(commit string) string {
 	if len(commit) > 0 {

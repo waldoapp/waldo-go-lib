@@ -2,55 +2,217 @@ package waldo
 
 import (
 	"os"
+	"strings"
 )
 
-func detectCI() string {
-	switch {
-	case onAppCenter():
-		return "App Center"
+type CIInfo struct {
+	gitBranch string
+	gitCommit string
+	provider  CIProvider
+	skipCount int
+}
 
-	case onAzureDevOps():
-		return "Azure DevOps"
+//-----------------------------------------------------------------------------
 
-	case onBitrise():
-		return "Bitrise"
+type CIProvider int
 
-	case onBuddybuild():
-		return "buddybuild"
+const (
+	Unknown CIProvider = iota // MUST be first
+	AppCenter
+	AzureDevOps
+	Bitrise
+	CircleCI
+	CodeBuild
+	GitHubActions
+	Jenkins
+	TeamCity
+	TravisCI
+	XcodeCloud
+)
 
-	case onCircleCI():
-		return "CircleCI"
+func (cp CIProvider) String() string {
+	return [...]string{
+		"Unknown",
+		"App Center",
+		"Azure DevOps",
+		"Bitrise",
+		"CircleCI",
+		"CodeBuild",
+		"GitHub Actions",
+		"Jenkins",
+		"TeamCity",
+		"Travis CI",
+		"Xcode Cloud"}[cp]
+}
 
-	case onCodeBuild():
-		return "CodeBuild"
+//-----------------------------------------------------------------------------
 
-	case onGitHubActions():
-		return "GitHub Actions"
+func DetectCIInfo(fullInfo bool) *CIInfo {
+	info := &CIInfo{provider: detectCIProvider()}
 
-	case onJenkins():
-		return "Jenkins"
+	if fullInfo {
+		info.extractFullInfo()
+	}
 
-	case onTeamCity():
-		return "TeamCity"
+	return info
+}
 
-	case onTravisCI():
-		return "Travis CI"
+//-----------------------------------------------------------------------------
 
-	case onXcodeCloud():
-		return "Xcode Cloud"
+func (ci *CIInfo) GitBranch() string {
+	return ci.gitBranch
+}
+
+func (ci *CIInfo) GitCommit() string {
+	return ci.gitCommit
+}
+
+func (ci *CIInfo) Provider() CIProvider {
+	return ci.provider
+}
+
+func (ci *CIInfo) SkipCount() int {
+	return ci.skipCount
+}
+
+//-----------------------------------------------------------------------------
+
+func (ci *CIInfo) extractFullInfo() {
+	switch ci.provider {
+	case AppCenter:
+		ci.extractFullInfoFromAppCenter()
+
+	case AzureDevOps:
+		ci.extractFullInfoFromAzureDevOps()
+
+	case Bitrise:
+		ci.extractFullInfoFromBitrise()
+
+	case CircleCI:
+		ci.extractFullInfoFromCircleCI()
+
+	case CodeBuild:
+		ci.extractFullInfoFromCodeBuild()
+
+	case GitHubActions:
+		ci.extractFullInfoFromGitHubActions()
+
+	case Jenkins:
+		ci.extractFullInfoFromJenkins()
+
+	case TeamCity:
+		ci.extractFullInfoFromTeamCity()
+
+	case TravisCI:
+		ci.extractFullInfoFromTravisCI()
+
+	case XcodeCloud:
+		ci.extractFullInfoFromXcodeCloud()
 
 	default:
-		return ""
+		break
 	}
 }
 
-func getSkipCount() int {
-	if onGitHubActions() &&
-		os.Getenv("GITHUB_EVENT_NAME") == "pull_request" {
-		return 1
+func (ci *CIInfo) extractFullInfoFromAppCenter() {
+	ci.gitBranch = os.Getenv("APPCENTER_BRANCH")
+	//ci.gitCommit = os.Getenv("???") -- not currently supported?
+}
+
+func (ci *CIInfo) extractFullInfoFromAzureDevOps() {
+	ci.gitBranch = os.Getenv("BUILD_SOURCEBRANCHNAME")
+	ci.gitCommit = os.Getenv("BUILD_SOURCEVERSION")
+}
+
+func (ci *CIInfo) extractFullInfoFromBitrise() {
+	ci.gitBranch = os.Getenv("BITRISE_GIT_BRANCH")
+	ci.gitCommit = os.Getenv("BITRISE_GIT_COMMIT")
+}
+
+func (ci *CIInfo) extractFullInfoFromCircleCI() {
+	ci.gitBranch = os.Getenv("CIRCLE_BRANCH")
+	ci.gitCommit = os.Getenv("CIRCLE_SHA1")
+}
+
+func (ci *CIInfo) extractFullInfoFromCodeBuild() {
+	trigger := os.Getenv("CODEBUILD_WEBHOOK_TRIGGER")
+
+	if strings.HasPrefix(trigger, "branch/") {
+		ci.gitBranch = trigger[len("branch/"):]
 	}
 
-	return 0
+	ci.gitCommit = os.Getenv("CODEBUILD_WEBHOOK_PREV_COMMIT")
+}
+
+func (ci *CIInfo) extractFullInfoFromGitHubActions() {
+	if os.Getenv("GITHUB_REF_TYPE") == "branch" {
+		ci.gitBranch = os.Getenv("GITHUB_REF_NAME")
+	}
+
+	ci.gitCommit = os.Getenv("GITHUB_SHA")
+
+	if os.Getenv("GITHUB_EVENT_NAME") == "pull_request" {
+		ci.skipCount = 1
+	}
+}
+
+func (ci *CIInfo) extractFullInfoFromJenkins() {
+	//ci.gitBranch = os.Getenv("???") -- not currently supported?
+	//ci.gitCommit = os.Getenv("???") -- not currently supported?
+}
+
+func (ci *CIInfo) extractFullInfoFromTeamCity() {
+	//ci.gitBranch = os.Getenv("???") -- not currently supported?
+	//ci.gitCommit = os.Getenv("???") -- not currently supported?
+}
+
+func (ci *CIInfo) extractFullInfoFromTravisCI() {
+	ci.gitBranch = os.Getenv("TRAVIS_BRANCH")
+	ci.gitCommit = os.Getenv("TRAVIS_COMMIT")
+}
+
+func (ci *CIInfo) extractFullInfoFromXcodeCloud() {
+	ci.gitBranch = os.Getenv("CI_BRANCH")
+	ci.gitCommit = os.Getenv("CI_COMMIT")
+}
+
+//-----------------------------------------------------------------------------
+
+func detectCIProvider() CIProvider {
+	switch {
+	case onAppCenter():
+		return AppCenter
+
+	case onAzureDevOps():
+		return AzureDevOps
+
+	case onBitrise():
+		return Bitrise
+
+	case onCircleCI():
+		return CircleCI
+
+	case onCodeBuild():
+		return CodeBuild
+
+	case onGitHubActions():
+		return GitHubActions
+
+	case onJenkins():
+		return Jenkins
+
+	case onTeamCity():
+		return TeamCity
+
+	case onTravisCI():
+		return TravisCI
+
+	case onXcodeCloud():
+		return XcodeCloud
+
+	default:
+		return Unknown
+	}
 }
 
 func onAppCenter() bool {
@@ -63,10 +225,6 @@ func onAzureDevOps() bool {
 
 func onBitrise() bool {
 	return os.Getenv("BITRISE_IO") == "true"
-}
-
-func onBuddybuild() bool {
-	return len(os.Getenv("BUDDYBUILD_BUILD_ID")) > 0
 }
 
 func onCircleCI() bool {

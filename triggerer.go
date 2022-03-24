@@ -17,7 +17,7 @@ type Triggerer struct {
 	userVerbose     bool
 
 	arch      string
-	ci        string
+	ciInfo    *CIInfo
 	platform  string
 	validated bool
 }
@@ -68,7 +68,7 @@ func (t *Triggerer) Validate() error {
 	}
 
 	t.arch = detectArch()
-	t.ci = detectCI()
+	t.ciInfo = DetectCIInfo(false)
 	t.platform = detectPlatform()
 	t.validated = true
 
@@ -144,7 +144,7 @@ func (t *Triggerer) makePayload() string {
 	appendIfNotEmpty(&payload, "agentName", agentName)
 	appendIfNotEmpty(&payload, "agentVersion", agentVersion)
 	appendIfNotEmpty(&payload, "arch", t.arch)
-	appendIfNotEmpty(&payload, "ci", t.ci)
+	appendIfNotEmpty(&payload, "ci", t.ciInfo.Provider().String())
 	appendIfNotEmpty(&payload, "platform", t.platform)
 	appendIfNotEmpty(&payload, "ruleName", t.userRuleName)
 	appendIfNotEmpty(&payload, "wrapperName", t.userOverrides["wrapperName"])
@@ -197,9 +197,9 @@ func (t *Triggerer) triggerRun() error {
 }
 
 func (t *Triggerer) userAgent() string {
-	ci := t.ci
+	ci := t.ciInfo.Provider().String()
 
-	if len(ci) == 0 {
+	if ci == "Unknown" {
 		ci = "Go CLI" // hack for now…
 	}
 

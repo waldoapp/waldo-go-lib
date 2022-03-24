@@ -22,13 +22,13 @@ func Version() string {
 //-----------------------------------------------------------------------------
 
 func addIfNotEmpty(query *url.Values, key string, value string) {
-	if len(value) > 0 {
+	if len(key) > 0 && len(value) > 0 {
 		query.Add(key, value)
 	}
 }
 
 func appendIfNotEmpty(payload *string, key string, value string) {
-	if len(value) == 0 {
+	if len(key) == 0 || len(value) == 0 {
 		return
 	}
 
@@ -42,7 +42,7 @@ func appendIfNotEmpty(payload *string, key string, value string) {
 func detectArch() string {
 	arch := runtime.GOARCH
 
-	switch runtime.GOARCH {
+	switch arch {
 	case "amd64":
 		return "x86_64"
 
@@ -80,7 +80,6 @@ func determineWorkingPath() string {
 }
 
 func isDir(path string) bool {
-
 	fi, err := os.Stat(path)
 
 	if os.IsNotExist(err) {
@@ -91,7 +90,6 @@ func isDir(path string) bool {
 }
 
 func isRegular(path string) bool {
-
 	fi, err := os.Stat(path)
 
 	if os.IsNotExist(err) {

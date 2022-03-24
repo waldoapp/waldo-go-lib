@@ -7,6 +7,13 @@ This project adheres to [Semantic Versioning].
 
 ## [Unreleased]
 
+## [1.3.0] - 2022-03-24
+
+### Added
+
+- Added support for detecting the current git branch name and git commit from
+  environment variables specific to the CI provider (if any).
+
 ## [1.2.0] - 2022-03-03
 
 ### Added
@@ -21,7 +28,8 @@ This project adheres to [Semantic Versioning].
 
 Initial public release.
 
-[Unreleased]:   https://github.com/waldoapp/waldo-go-lib/compare/v1.2.0...HEAD
+[Unreleased]:   https://github.com/waldoapp/waldo-go-lib/compare/v1.3.0...HEAD
+[1.3.0]:        https://github.com/waldoapp/waldo-go-lib/compare/v1.2.0...v1.3.0
 [1.2.0]:        https://github.com/waldoapp/waldo-go-lib/compare/v1.0.0...v1.2.0
 [1.0.0]:        https://github.com/waldoapp/waldo-go-lib/compare/7a87b12...v1.0.0
 

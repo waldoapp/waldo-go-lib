@@ -26,11 +26,9 @@ type Uploader struct {
 	buildPath        string
 	buildPayloadPath string
 	buildSuffix      string
-	ci               string
+	ciInfo           *CIInfo
 	flavor           string
-	gitAccess        string
-	gitBranch        string
-	gitCommit        string
+	gitInfo          *GitInfo
 	platform         string
 	validated        bool
 	workingPath      string
@@ -63,6 +61,22 @@ func (u *Uploader) BuildPayloadPath() string {
 	return u.buildPayloadPath
 }
 
+func (u *Uploader) CIGitBranch() string {
+	return u.ciInfo.GitBranch()
+}
+
+func (u *Uploader) CIGitCommit() string {
+	return u.ciInfo.GitCommit()
+}
+
+func (u *Uploader) CIProvider() string {
+	return u.ciInfo.Provider().String()
+}
+
+func (u *Uploader) GitAccess() string {
+	return u.gitInfo.Access().String()
+}
+
 func (u *Uploader) GitBranch() string {
 	return u.userGitBranch
 }
@@ -72,11 +86,11 @@ func (u *Uploader) GitCommit() string {
 }
 
 func (u *Uploader) InferredGitBranch() string {
-	return u.gitBranch
+	return u.gitInfo.Branch()
 }
 
 func (u *Uploader) InferredGitCommit() string {
-	return u.gitCommit
+	return u.gitInfo.Commit()
 }
 
 func (u *Uploader) UploadToken() string {
@@ -140,19 +154,15 @@ func (u *Uploader) Validate() error {
 		return err
 	}
 
-	gitAccess, gitBranch, gitCommit := inferGit(getSkipCount())
-
 	workingPath := determineWorkingPath()
 
 	u.arch = detectArch()
 	u.buildPath = buildPath
 	u.buildPayloadPath = determineBuildPayloadPath(workingPath, buildPath, buildSuffix)
 	u.buildSuffix = buildSuffix
-	u.ci = detectCI()
+	u.ciInfo = DetectCIInfo(true)
 	u.flavor = flavor
-	u.gitAccess = gitAccess
-	u.gitBranch = gitBranch
-	u.gitCommit = gitCommit
+	u.gitInfo = InferGitInfo(u.ciInfo.SkipCount())
 	u.platform = detectPlatform()
 	u.validated = true
 	u.workingPath = workingPath
@@ -266,11 +276,13 @@ func (u *Uploader) makeBuildURL() string {
 	addIfNotEmpty(&query, "agentName", agentName)
 	addIfNotEmpty(&query, "agentVersion", agentVersion)
 	addIfNotEmpty(&query, "arch", u.arch)
-	addIfNotEmpty(&query, "ci", u.ci)
+	addIfNotEmpty(&query, "ci", u.ciInfo.Provider().String())
+	addIfNotEmpty(&query, "ciGitBranch", u.ciInfo.GitBranch())
+	addIfNotEmpty(&query, "ciGitCommit", u.ciInfo.GitCommit())
 	addIfNotEmpty(&query, "flavor", u.flavor)
-	addIfNotEmpty(&query, "gitAccess", u.gitAccess)
-	addIfNotEmpty(&query, "gitBranch", u.gitBranch)
-	addIfNotEmpty(&query, "gitCommit", u.gitCommit)
+	addIfNotEmpty(&query, "gitAccess", u.gitInfo.Access().String())
+	addIfNotEmpty(&query, "gitBranch", u.gitInfo.Branch())
+	addIfNotEmpty(&query, "gitCommit", u.gitInfo.Commit())
 	addIfNotEmpty(&query, "platform", u.platform)
 	addIfNotEmpty(&query, "userGitBranch", u.userGitBranch)
 	addIfNotEmpty(&query, "userGitCommit", u.userGitCommit)
@@ -289,7 +301,9 @@ func (u *Uploader) makeErrorPayload(err error) string {
 	appendIfNotEmpty(&payload, "agentName", agentName)
 	appendIfNotEmpty(&payload, "agentVersion", agentVersion)
 	appendIfNotEmpty(&payload, "arch", u.arch)
-	appendIfNotEmpty(&payload, "ci", u.ci)
+	appendIfNotEmpty(&payload, "ci", u.ciInfo.Provider().String())
+	appendIfNotEmpty(&payload, "ciGitBranch", u.ciInfo.GitBranch())
+	appendIfNotEmpty(&payload, "ciGitCommit", u.ciInfo.GitCommit())
 	appendIfNotEmpty(&payload, "message", err.Error())
 	appendIfNotEmpty(&payload, "platform", u.platform)
 	appendIfNotEmpty(&payload, "wrapperName", u.userOverrides["wrapperName"])
@@ -380,9 +394,9 @@ func (u *Uploader) uploadError(err error) error {
 }
 
 func (u *Uploader) userAgent() string {
-	ci := u.ci
+	ci := u.ciInfo.Provider().String()
 
-	if len(ci) == 0 {
+	if ci == "Unknown" {
 		ci = "Go CLI" // hack for now…
 	}
 
