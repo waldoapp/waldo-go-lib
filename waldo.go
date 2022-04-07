@@ -2,7 +2,7 @@ package waldo
 
 const (
 	agentName    = "Waldo Go Lib"
-	agentVersion = "1.3.0"
+	agentVersion = "1.3.1"
 
 	defaultAPIBuildEndpoint   = "https://api.waldo.com/versions"
 	defaultAPIErrorEndpoint   = "https://api.waldo.com/uploadError"

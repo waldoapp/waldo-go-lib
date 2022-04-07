@@ -116,7 +116,7 @@ func (ci *CIInfo) extractFullInfo() {
 
 func (ci *CIInfo) extractFullInfoFromAppCenter() {
 	ci.gitBranch = os.Getenv("APPCENTER_BRANCH")
-	//ci.gitCommit = os.Getenv("???") -- not currently supported?
+	ci.gitCommit = "" //os.Getenv("???") -- not currently supported?
 }
 
 func (ci *CIInfo) extractFullInfoFromAzureDevOps() {
@@ -139,31 +139,57 @@ func (ci *CIInfo) extractFullInfoFromCodeBuild() {
 
 	if strings.HasPrefix(trigger, "branch/") {
 		ci.gitBranch = trigger[len("branch/"):]
+	} else {
+		ci.gitBranch = ""
 	}
 
 	ci.gitCommit = os.Getenv("CODEBUILD_WEBHOOK_PREV_COMMIT")
 }
 
 func (ci *CIInfo) extractFullInfoFromGitHubActions() {
-	if os.Getenv("GITHUB_REF_TYPE") == "branch" {
-		ci.gitBranch = os.Getenv("GITHUB_REF_NAME")
-	}
+	eventName := os.Getenv("GITHUB_EVENT_NAME")
+	refType := os.Getenv("GITHUB_REF_TYPE")
 
-	ci.gitCommit = os.Getenv("GITHUB_SHA")
+	switch eventName {
+	case "pull_request", "pull_request_target":
+		if refType == "branch" {
+			ci.gitBranch = os.Getenv("GITHUB_HEAD_REF")
+		} else {
+			ci.gitBranch = ""
+		}
 
-	if os.Getenv("GITHUB_EVENT_NAME") == "pull_request" {
+		//
+		// The following environment variable must be set by us (most likely in
+		// a custom action) to match the current value of
+		// `github.event.pull_request.head.sha`:
+		//
+		ci.gitCommit = os.Getenv("GITHUB_EVENT_PULL_REQUEST_HEAD_SHA")
+
 		ci.skipCount = 1
+
+	case "push":
+		if refType == "branch" {
+			ci.gitBranch = os.Getenv("GITHUB_REF_NAME")
+		} else {
+			ci.gitBranch = ""
+		}
+
+		ci.gitCommit = os.Getenv("GITHUB_SHA")
+
+	default:
+		ci.gitBranch = ""
+		ci.gitCommit = ""
 	}
 }
 
 func (ci *CIInfo) extractFullInfoFromJenkins() {
-	//ci.gitBranch = os.Getenv("???") -- not currently supported?
-	//ci.gitCommit = os.Getenv("???") -- not currently supported?
+	ci.gitBranch = "" //os.Getenv("???") -- not currently supported?
+	ci.gitCommit = "" //os.Getenv("???") -- not currently supported?
 }
 
 func (ci *CIInfo) extractFullInfoFromTeamCity() {
-	//ci.gitBranch = os.Getenv("???") -- not currently supported?
-	//ci.gitCommit = os.Getenv("???") -- not currently supported?
+	ci.gitBranch = "" //os.Getenv("???") -- not currently supported?
+	ci.gitCommit = "" //os.Getenv("???") -- not currently supported?
 }
 
 func (ci *CIInfo) extractFullInfoFromTravisCI() {

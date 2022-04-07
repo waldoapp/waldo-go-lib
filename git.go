@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os/exec"
 	"runtime"
+	"strings"
 )
 
 type GitInfo struct {
@@ -69,10 +70,16 @@ func (gi *GitInfo) Commit() string {
 
 func inferGitBranch(commit string) string {
 	if len(commit) > 0 {
-		name, _, err := run("git", "name-rev", "--refs=heads/*", "--name-only", commit)
+		name, _, err := run("git", "name-rev", "--always", "--name-only", commit)
 
-		if err == nil && name != "HEAD" {
-			return name
+		if err == nil {
+			if strings.HasPrefix(name, "remotes/origin/") {
+				name = name[len("remotes/origin/"):]
+			}
+
+			if name != "HEAD" {
+				return name
+			}
 		}
 	}
 

@@ -7,6 +7,14 @@ This project adheres to [Semantic Versioning].
 
 ## [Unreleased]
 
+## [1.3.1] - 2022-04-07
+
+### Fixed
+
+- Fixed issues with git branch inference.
+- Fixed erroneous detection of the git commit from environment variables in a
+  GitHub Actions workflow when merging via pull request.
+
 ## [1.3.0] - 2022-03-24
 
 ### Added
@@ -28,7 +36,8 @@ This project adheres to [Semantic Versioning].
 
 Initial public release.
 
-[Unreleased]:   https://github.com/waldoapp/waldo-go-lib/compare/v1.3.0...HEAD
+[Unreleased]:   https://github.com/waldoapp/waldo-go-lib/compare/v1.3.1...HEAD
+[1.3.1]:        https://github.com/waldoapp/waldo-go-lib/compare/v1.3.0...v1.3.1
 [1.3.0]:        https://github.com/waldoapp/waldo-go-lib/compare/v1.2.0...v1.3.0
 [1.2.0]:        https://github.com/waldoapp/waldo-go-lib/compare/v1.0.0...v1.2.0
 [1.0.0]:        https://github.com/waldoapp/waldo-go-lib/compare/7a87b12...v1.0.0
