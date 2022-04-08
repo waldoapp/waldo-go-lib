@@ -68,21 +68,84 @@ func (gi *GitInfo) Commit() string {
 
 //-----------------------------------------------------------------------------
 
-func inferGitBranch(commit string) string {
-	if len(commit) > 0 {
-		name, _, err := run("git", "name-rev", "--always", "--name-only", commit)
+func removeDuplicate(strings []string) []string {
+	seen := make(map[string]bool)
+	var result []string
+	for _, s := range strings {
+		if _, ok := seen[s]; !ok {
+			seen[s] = true
+			result = append(result, s)
+		}
+	}
+	return result
+}
 
-		if err == nil {
-			if strings.HasPrefix(name, "remotes/origin/") {
-				name = name[len("remotes/origin/"):]
-			}
+func refNameToBranchName(refName string) string {
+	branchName := strings.TrimSpace(refName)
 
-			if name != "HEAD" {
-				return name
-			}
+	if strings.HasPrefix(branchName, "refs/heads/") {
+		branchName = strings.TrimPrefix(branchName, "refs/heads/")
+	} else if strings.HasPrefix(branchName, "refs/remotes/") {
+		branchName = strings.TrimPrefix(branchName, "refs/remotes/")
+
+		// Remove the remote name
+		slash := strings.Index(branchName, "/")
+		if slash == -1 {
+			return ""
+		}
+		branchName = branchName[slash+1:]
+	} else {
+		return ""
+	}
+
+	if branchName == "HEAD" {
+		return ""
+	}
+
+	return branchName
+}
+
+func getBranchNamesFromGitForeachRefResults(results string) []string {
+	lines := strings.Split(results, "\n")
+
+	var branchNames []string
+
+	for _, line := range lines {
+		branchName := refNameToBranchName(line)
+
+		if len(branchName) > 0 {
+			branchNames = append(branchNames, branchName)
 		}
 	}
 
+	return removeDuplicate(branchNames)
+}
+
+func inferGitBranchFromForEachRef(commit string) string {
+	stdout, _, err := run("git", "for-each-ref", fmt.Sprintf("--points-at=%s", commit), "--format=%(refname)")
+
+	if err == nil {
+		branchNames := getBranchNamesFromGitForeachRefResults(stdout)
+		if len(branchNames) > 0 {
+			// We don't know which branch is the right one, so just return the first one
+			return branchNames[0]
+		}
+	}
+
+	return ""
+}
+
+func inferGitBranchFromNameRev(commit string) string {
+	name, _, err := run("git", "name-rev", "--always", "--name-only", commit)
+
+	if err == nil {
+		return refNameToBranchName(name)
+	}
+
+	return ""
+}
+
+func inferGitBranchFromRevParse() string {
 	name, _, err := run("git", "rev-parse", "--abbrev-ref", "HEAD")
 
 	if err == nil && name != "HEAD" {
@@ -90,6 +153,22 @@ func inferGitBranch(commit string) string {
 	}
 
 	return ""
+}
+
+func inferGitBranch(commit string) string {
+	if len(commit) > 0 {
+		fromForeachRev := inferGitBranchFromForEachRef(commit)
+		if fromForeachRev != "" {
+			return fromForeachRev
+		}
+
+		fromNameRev := inferGitBranchFromNameRev(commit)
+		if fromNameRev != "" {
+			return fromNameRev
+		}
+	}
+
+	return inferGitBranchFromRevParse()
 }
 
 func inferGitCommit(skipCount int) string {
