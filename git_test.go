@@ -95,3 +95,51 @@ func TestGetBranchesFull(t *testing.T) {
 		t.Errorf("Expected [\"master\"], got %v", names)
 	}
 }
+
+func TestNameRevToBranchNameEmpty(t *testing.T) {
+	name := nameRevToBranchName("")
+	expected := ""
+	if name != expected {
+		t.Errorf("Expected %s string, got %v", expected, name)
+	}
+}
+
+func TestNameRevToBranchNameSimple(t *testing.T) {
+	name := nameRevToBranchName("foo")
+	expected := "foo"
+	if name != expected {
+		t.Errorf("Expected %s string, got %v", expected, name)
+	}
+}
+
+func TestNameRevToBranchNameComplex(t *testing.T) {
+	name := nameRevToBranchName("features/waldo/git-handling")
+	expected := "features/waldo/git-handling"
+	if name != expected {
+		t.Errorf("Expected %s string, got %v", expected, name)
+	}
+}
+
+func TestNameRevToBranchNameRemote(t *testing.T) {
+	name := nameRevToBranchName("remotes/origin/foo")
+	expected := "foo"
+	if name != expected {
+		t.Errorf("Expected %s string, got %v", expected, name)
+	}
+}
+
+func TestNameRevToBranchNameTags(t *testing.T) {
+	name := nameRevToBranchName("tags/bar")
+	expected := ""
+	if name != expected {
+		t.Errorf("Expected %s string, got %v", expected, name)
+	}
+}
+
+func TestNameRevToBranchNameHEAD(t *testing.T) {
+	name := nameRevToBranchName("HEAD")
+	expected := ""
+	if name != expected {
+		t.Errorf("Expected %s string, got %v", expected, name)
+	}
+}

@@ -135,11 +135,34 @@ func inferGitBranchFromForEachRef(commit string) string {
 	return ""
 }
 
+func nameRevToBranchName(refName string) string {
+	branchName := strings.TrimSpace(refName)
+
+	if strings.HasPrefix(branchName, "tags/") {
+		return ""
+	} else if strings.HasPrefix(branchName, "remotes/") {
+		branchName = strings.TrimPrefix(branchName, "remotes/")
+
+		// Remove the remote name
+		slash := strings.Index(branchName, "/")
+		if slash == -1 {
+			return ""
+		}
+		branchName = branchName[slash+1:]
+	}
+
+	if branchName == "HEAD" {
+		return ""
+	}
+
+	return branchName
+}
+
 func inferGitBranchFromNameRev(commit string) string {
 	name, _, err := run("git", "name-rev", "--always", "--name-only", commit)
 
 	if err == nil {
-		return refNameToBranchName(name)
+		return nameRevToBranchName(name)
 	}
 
 	return ""
