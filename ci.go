@@ -138,7 +138,7 @@ func (ci *CIInfo) extractFullInfoFromCodeBuild() {
 	trigger := os.Getenv("CODEBUILD_WEBHOOK_TRIGGER")
 
 	if strings.HasPrefix(trigger, "branch/") {
-		ci.gitBranch = trigger[len("branch/"):]
+		ci.gitBranch = strings.TrimPrefix(trigger, "branch/")
 	} else {
 		ci.gitBranch = ""
 	}
