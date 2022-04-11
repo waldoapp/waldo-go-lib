@@ -68,44 +68,7 @@ func (gi *GitInfo) Commit() string {
 
 //-----------------------------------------------------------------------------
 
-func removeDuplicate(strings []string) []string {
-	seen := make(map[string]bool)
-	var result []string
-	for _, s := range strings {
-		if _, ok := seen[s]; !ok {
-			seen[s] = true
-			result = append(result, s)
-		}
-	}
-	return result
-}
-
-func refNameToBranchName(refName string) string {
-	branchName := strings.TrimSpace(refName)
-
-	if strings.HasPrefix(branchName, "refs/heads/") {
-		branchName = strings.TrimPrefix(branchName, "refs/heads/")
-	} else if strings.HasPrefix(branchName, "refs/remotes/") {
-		branchName = strings.TrimPrefix(branchName, "refs/remotes/")
-
-		// Remove the remote name
-		slash := strings.Index(branchName, "/")
-		if slash == -1 {
-			return ""
-		}
-		branchName = branchName[slash+1:]
-	} else {
-		return ""
-	}
-
-	if branchName == "HEAD" {
-		return ""
-	}
-
-	return branchName
-}
-
-func getBranchNamesFromGitForeachRefResults(results string) []string {
+func fetchBranchNamesFromGitForEachRefResults(results string) []string {
 	lines := strings.Split(results, "\n")
 
 	var branchNames []string
@@ -118,44 +81,49 @@ func getBranchNamesFromGitForeachRefResults(results string) []string {
 		}
 	}
 
-	return removeDuplicate(branchNames)
+	return removeDuplicates(branchNames)
+}
+
+func hasGitRepository() bool {
+	_, _, err := run("git", "rev-parse")
+
+	return err == nil
+}
+
+func inferGitBranch(commit string) string {
+	if len(commit) > 0 {
+		fromForEachRev := inferGitBranchFromForEachRef(commit)
+
+		if len(fromForEachRev) > 0 {
+			return fromForEachRev
+		}
+
+		fromNameRev := inferGitBranchFromNameRev(commit)
+
+		if len(fromNameRev) > 0 {
+			return fromNameRev
+		}
+	}
+
+	return inferGitBranchFromRevParse()
 }
 
 func inferGitBranchFromForEachRef(commit string) string {
 	stdout, _, err := run("git", "for-each-ref", fmt.Sprintf("--points-at=%s", commit), "--format=%(refname)")
 
 	if err == nil {
-		branchNames := getBranchNamesFromGitForeachRefResults(stdout)
+		branchNames := fetchBranchNamesFromGitForEachRefResults(stdout)
+
 		if len(branchNames) > 0 {
-			// We don't know which branch is the right one, so just return the first one
+			//
+			// Since we don’t know which branch is the correct one, arbitrarily
+			// return the first one:
+			//
 			return branchNames[0]
 		}
 	}
 
 	return ""
-}
-
-func nameRevToBranchName(refName string) string {
-	branchName := strings.TrimSpace(refName)
-
-	if strings.HasPrefix(branchName, "tags/") {
-		return ""
-	} else if strings.HasPrefix(branchName, "remotes/") {
-		branchName = strings.TrimPrefix(branchName, "remotes/")
-
-		// Remove the remote name
-		slash := strings.Index(branchName, "/")
-		if slash == -1 {
-			return ""
-		}
-		branchName = branchName[slash+1:]
-	}
-
-	if branchName == "HEAD" {
-		return ""
-	}
-
-	return branchName
 }
 
 func inferGitBranchFromNameRev(commit string) string {
@@ -178,22 +146,6 @@ func inferGitBranchFromRevParse() string {
 	return ""
 }
 
-func inferGitBranch(commit string) string {
-	if len(commit) > 0 {
-		fromForeachRev := inferGitBranchFromForEachRef(commit)
-		if fromForeachRev != "" {
-			return fromForeachRev
-		}
-
-		fromNameRev := inferGitBranchFromNameRev(commit)
-		if fromNameRev != "" {
-			return fromNameRev
-		}
-	}
-
-	return inferGitBranchFromRevParse()
-}
-
 func inferGitCommit(skipCount int) string {
 	skip := fmt.Sprintf("--skip=%d", skipCount)
 
@@ -204,12 +156,6 @@ func inferGitCommit(skipCount int) string {
 	}
 
 	return hash
-}
-
-func hasGitRepository() bool {
-	_, _, err := run("git", "rev-parse")
-
-	return err == nil
 }
 
 func isGitInstalled() bool {
@@ -224,4 +170,77 @@ func isGitInstalled() bool {
 	_, err := exec.LookPath(name)
 
 	return err == nil
+}
+
+func nameRevToBranchName(refName string) string {
+	branchName := strings.TrimSpace(refName)
+
+	if strings.HasPrefix(branchName, "tags/") {
+		return ""
+	}
+
+	if strings.HasPrefix(branchName, "remotes/") {
+		branchName = strings.TrimPrefix(branchName, "remotes/")
+
+		//
+		// Remove the remote name:
+		//
+		slash := strings.Index(branchName, "/")
+
+		if slash == -1 {
+			return ""
+		}
+
+		branchName = branchName[slash+1:]
+	}
+
+	if branchName == "HEAD" {
+		return ""
+	}
+
+	return branchName
+}
+
+func refNameToBranchName(refName string) string {
+	branchName := strings.TrimSpace(refName)
+
+	if strings.HasPrefix(branchName, "refs/heads/") {
+		branchName = strings.TrimPrefix(branchName, "refs/heads/")
+	} else if strings.HasPrefix(branchName, "refs/remotes/") {
+		branchName = strings.TrimPrefix(branchName, "refs/remotes/")
+
+		//
+		// Remove the remote name:
+		//
+		slash := strings.Index(branchName, "/")
+
+		if slash == -1 {
+			return ""
+		}
+
+		branchName = branchName[slash+1:]
+	} else {
+		return ""
+	}
+
+	if branchName == "HEAD" {
+		return ""
+	}
+
+	return branchName
+}
+
+func removeDuplicates(strings []string) []string {
+	seen := make(map[string]bool)
+
+	var result []string
+
+	for _, s := range strings {
+		if _, ok := seen[s]; !ok {
+			seen[s] = true
+			result = append(result, s)
+		}
+	}
+
+	return result
 }

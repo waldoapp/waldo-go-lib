@@ -9,15 +9,19 @@ import (
 
 func main() {
 	args := os.Args[1:]
+
 	var cd string
+
 	if len(args) > 0 {
 		cd = args[0]
+
 		if err := os.Chdir(cd); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to change directory to %s: %s\n", cd, err)
 			return
 		}
 	} else {
 		var err error
+
 		if cd, err = os.Getwd(); err != nil {
 			fmt.Fprintf(os.Stderr, "Failed to get current directory: %s\n", err)
 			return

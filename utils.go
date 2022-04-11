@@ -129,11 +129,7 @@ func validateBuildPath(buildPath string) (string, string, string, error) {
 		return "", "", "", err
 	}
 
-	buildSuffix := filepath.Ext(buildPath)
-
-	if strings.HasPrefix(buildSuffix, ".") {
-		buildSuffix = buildSuffix[1:]
-	}
+	buildSuffix := strings.TrimPrefix(filepath.Ext(buildPath), ".")
 
 	switch buildSuffix {
 	case "apk":
